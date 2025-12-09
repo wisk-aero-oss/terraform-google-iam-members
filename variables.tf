@@ -22,18 +22,13 @@ variable "default_location" {
 }
 
 # Allow global condition for all member roles
-#  TODO: add code to handle new data
 variable "members" {
   description = "List of members and roles to add them to."
   type = list(object({
     member = string
-    #condition = optional(object({
-    #  description = string
-    #  expression  = string
-    #  title       = string
-    #}))
     roles = list(object({
       role     = string
+      resource = optional(string, "base")
       location = optional(string)
       condition = optional(object({
         description = string
