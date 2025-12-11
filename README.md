@@ -22,6 +22,8 @@ Resource bindings to:
 - BigQuery table roles
 - Cloud Run jobs
 - Secrets
+- Service Accounts
+- Artifact Registry Repositories
 
 ## Role formats
 
@@ -49,6 +51,9 @@ An identifier for the resource the binding is made too. Usually a name/single ID
 | bigquery table | bigquery-table | datasetId:tableId |
 | cloud run jobs | cloud-run-job | job name |
 | billing acct | billing | null |
+| gcsm secrets | secret | secret name
+| service accounts | service-account | service account name
+| artifact registry repository | artifact-registry | repository name
 
 ## Required Inputs
 
@@ -91,12 +96,15 @@ No modules.
 
 | Name | Type |
 |------|------|
+| [google_artifact_registry_repository_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/artifact_registry_repository_iam_member) | resource |
 | [google_bigquery_dataset_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/bigquery_dataset_iam_member) | resource |
 | [google_bigquery_table_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/bigquery_table_iam_member) | resource |
 | [google_billing_account_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/billing_account_iam_member) | resource |
 | [google_cloud_run_v2_job_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_v2_job_iam_member) | resource |
 | [google_organization_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/organization_iam_member) | resource |
 | [google_project_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/project_iam_member) | resource |
+| [google_secret_manager_secret_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/secret_manager_secret_iam_member) | resource |
+| [google_service_account_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/service_account_iam_member) | resource |
 | [google_storage_bucket_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/storage_bucket_iam_member) | resource |
 | [null_resource.org_proj_precondition_validation](https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource) | resource |
 | [google_billing_account.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/billing_account) | data source |

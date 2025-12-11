@@ -21,6 +21,8 @@
  * - BigQuery table roles
  * - Cloud Run jobs
  * - Secrets
+ * - Service Accounts
+ * - Artifact Registry Repositories
  *
  * ## Role formats
  *
@@ -48,6 +50,9 @@
  * | bigquery table | bigquery-table | datasetId:tableId |
  * | cloud run jobs | cloud-run-job | job name |
  * | billing acct | billing | null |
+ * | gcsm secrets | secret | secret name
+ * | service accounts | service-account | service account name
+ * | artifact registry repository | artifact-registry | repository name
  *
  * ## Required Inputs
  *
@@ -61,12 +66,8 @@
 #       expression  = "resource.name.startsWith(${format("\"%s/%s/%s/%s%s\"","projects",var.project_number,"secrets",each.value.secrets_prefix,"__")})"
 #   google_cloud_run_service_iam_member
 #   google_folder_iam_member
-#   google_secret_manager_secret_iam_member - for single secret
-#   google_service_account_iam_member - allow principal to impersonate service account
 #   more as needed
-# TODO
-# Role format: sa:[org|project|]-<role>:<serviceAccount>
-#resource "google_service_account_iam_member" "self" {}
+
 
 # TODO: ?? update to be 1 of project, org, or billing required
 resource "null_resource" "org_proj_precondition_validation" {
@@ -104,16 +105,16 @@ locals {
   ])
 }
 
-
-# Role format: bigquery-dataset:[org|project|]-<role>:datasetId
 resource "google_bigquery_dataset_iam_member" "self" {
   for_each = { for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
   if var.project_id != "" && startswith(member.resource, "bigquery-dataset:") }
 
+  project = local.target_id
+  role    = each.value.role
+  member  = startswith(each.value.member, "principal") ? "iamMember:${each.value.member}" : each.value.member
+
   dataset_id = split(":", each.value.resource)[1]
-  member     = startswith(each.value.member, "principal") ? "iamMember:${each.value.member}" : each.value.member
-  project    = local.target_id
-  role       = each.value.role
+
   dynamic "condition" {
     for_each = lookup(each.value, "condition", null) != null ? [each.value.condition] : []
     content {
@@ -124,16 +125,17 @@ resource "google_bigquery_dataset_iam_member" "self" {
   }
 }
 
-# Role format: bigquery-table:[org|project|]-<role>:datasetId:tableId
 resource "google_bigquery_table_iam_member" "self" {
   for_each = { for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
   if var.project_id != "" && startswith(member.resource, "bigquery-table:") }
 
+  project = local.target_id
+  role    = each.value.role
+  member  = each.value.member
+
   dataset_id = split(":", each.value.resource)[1]
-  member     = each.value.member
-  project    = local.target_id
-  role       = each.value.role
   table_id   = split(":", each.value.resource)[2]
+
   dynamic "condition" {
     for_each = lookup(each.value, "condition", null) != null ? [each.value.condition] : []
     content {
@@ -149,8 +151,8 @@ resource "google_billing_account_iam_member" "self" {
   if var.billing_account_name != "" && startswith(member.resource, "billing:") }
 
   billing_account_id = data.google_billing_account.self[0].id
+  role               = each.value.role
   member             = each.value.member
-  role               = "roles/${split(":", each.value.role)[1]}"
 }
 
 resource "google_organization_iam_member" "self" {
@@ -160,6 +162,7 @@ resource "google_organization_iam_member" "self" {
   org_id = local.target_id
   role   = each.value.role
   member = each.value.member
+
   dynamic "condition" {
     for_each = lookup(each.value, "condition", null) != null ? [each.value.condition] : []
     content {
@@ -169,7 +172,6 @@ resource "google_organization_iam_member" "self" {
     }
   }
 }
-
 
 resource "google_project_iam_member" "self" {
   for_each = { for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
@@ -178,6 +180,7 @@ resource "google_project_iam_member" "self" {
   project = local.target_id
   role    = each.value.role
   member  = each.value.member
+
   dynamic "condition" {
     for_each = lookup(each.value, "condition", null) != null ? [each.value.condition] : []
     content {
@@ -188,14 +191,15 @@ resource "google_project_iam_member" "self" {
   }
 }
 
-# Role format: storage:[org|project|]-<role>:<bucket>
 resource "google_storage_bucket_iam_member" "self" {
   for_each = { for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
   if var.project_id != "" && startswith(member.resource, "storage:") }
 
-  bucket = split(":", each.value.resource)[1]
-  member = each.value.member
   role   = each.value.role
+  member = each.value.member
+
+  bucket = split(":", each.value.resource)[1]
+
   dynamic "condition" {
     for_each = lookup(each.value, "condition", null) != null ? [each.value.condition] : []
     content {
@@ -206,19 +210,85 @@ resource "google_storage_bucket_iam_member" "self" {
   }
 }
 
-
-# Role format: cloud-run-job:[org|project|]-<role>:job-name
 resource "google_cloud_run_v2_job_iam_member" "self" {
   for_each = {
     for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
     if var.project_id != "" && startswith(member.resource, "cloud-run-job:")
   }
 
-  name     = split(":", each.value.resource)[1]
-  member   = each.value.member
   project  = local.target_id
   location = each.value.location
   role     = each.value.role
+  member   = each.value.member
+
+  name = split(":", each.value.resource)[1]
+
+  dynamic "condition" {
+    for_each = lookup(each.value, "condition", null) != null ? [each.value.condition] : []
+    content {
+      description = condition.value.description
+      expression  = condition.value.expression
+      title       = condition.value.title
+    }
+  }
+}
+
+resource "google_secret_manager_secret_iam_member" "self" {
+  for_each = {
+    for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
+    if var.project_id != "" && startswith(member.resource, "secret:")
+  }
+
+  project = local.target_id
+  role    = each.value.role
+  member  = each.value.member
+
+  secret_id = "projects/${local.target_id}/secrets/${split(":", each.value.resource)[1]}"
+
+  dynamic "condition" {
+    for_each = lookup(each.value, "condition", null) != null ? [each.value.condition] : []
+    content {
+      description = condition.value.description
+      expression  = condition.value.expression
+      title       = condition.value.title
+    }
+  }
+}
+
+resource "google_service_account_iam_member" "self" {
+  for_each = {
+    for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
+    if var.project_id != "" && startswith(member.resource, "service-account:")
+  }
+
+  role   = each.value.role
+  member = each.value.member
+
+  service_account_id = split(":", each.value.resource)[1]
+
+  dynamic "condition" {
+    for_each = lookup(each.value, "condition", null) != null ? [each.value.condition] : []
+    content {
+      description = condition.value.description
+      expression  = condition.value.expression
+      title       = condition.value.title
+    }
+  }
+}
+
+resource "google_artifact_registry_repository_iam_member" "self" {
+  for_each = {
+    for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
+    if var.project_id != "" && startswith(member.resource, "artifact-registry:")
+  }
+
+  project  = local.target_id
+  location = each.value.location
+  role     = each.value.role
+  member   = each.value.member
+
+  repository = split(":", each.value.resource)[1]
+
   dynamic "condition" {
     for_each = lookup(each.value, "condition", null) != null ? [each.value.condition] : []
     content {
