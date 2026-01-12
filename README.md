@@ -15,6 +15,7 @@ Role parameters:
 - IAM Conditions
 
 Resource bindings to:
+- Folder
 - Organization
 - Project
 - Storage bucket roles
@@ -85,7 +86,7 @@ module "example" {
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | 7.12.0 |
+| <a name="provider_google"></a> [google](#provider\_google) | 7.15.0 |
 | <a name="provider_null"></a> [null](#provider\_null) | 3.2.4 |
 
 ## Modules
@@ -101,6 +102,7 @@ No modules.
 | [google_bigquery_table_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/bigquery_table_iam_member) | resource |
 | [google_billing_account_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/billing_account_iam_member) | resource |
 | [google_cloud_run_v2_job_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/cloud_run_v2_job_iam_member) | resource |
+| [google_folder_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/folder_iam_member) | resource |
 | [google_organization_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/organization_iam_member) | resource |
 | [google_project_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/project_iam_member) | resource |
 | [google_secret_manager_secret_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/secret_manager_secret_iam_member) | resource |
@@ -115,6 +117,7 @@ No modules.
 |------|-------------|------|---------|:--------:|
 | <a name="input_billing_account_name"></a> [billing\_account\_name](#input\_billing\_account\_name) | Billing account name. | `string` | `""` | no |
 | <a name="input_default_location"></a> [default\_location](#input\_default\_location) | The default location | `string` | `null` | no |
+| <a name="input_folder_id"></a> [folder\_id](#input\_folder\_id) | Folder numeric id. Can be either format: ########## or folder/########## | `string` | `""` | no |
 | <a name="input_members"></a> [members](#input\_members) | List of members and roles to add them to. | <pre>list(object({<br/>    member = string<br/>    roles = list(object({<br/>      role     = string<br/>      resource = optional(string, "base")<br/>      location = optional(string)<br/>      condition = optional(object({<br/>        description = string<br/>        expression  = string<br/>        title       = string<br/>      }))<br/>    }))<br/>  }))</pre> | n/a | yes |
 | <a name="input_organization_id"></a> [organization\_id](#input\_organization\_id) | Organization ID. | `string` | `""` | no |
 | <a name="input_project_id"></a> [project\_id](#input\_project\_id) | Project ID. | `string` | `""` | no |

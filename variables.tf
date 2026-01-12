@@ -4,6 +4,11 @@ variable "billing_account_name" {
   type        = string
   default     = ""
 }
+variable "folder_id" {
+  description = "Folder numeric id. Can be either format: ########## or folder/##########"
+  type        = string
+  default     = ""
+}
 variable "organization_id" {
   description = "Organization ID."
   type        = string

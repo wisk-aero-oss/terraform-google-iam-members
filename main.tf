@@ -14,6 +14,7 @@
  * - IAM Conditions
  *
  * Resource bindings to:
+ * - Folder
  * - Organization
  * - Project
  * - Storage bucket roles
@@ -64,22 +65,24 @@
 #   constraint patterns ?
 #     secret prefix
 #       expression  = "resource.name.startsWith(${format("\"%s/%s/%s/%s%s\"","projects",var.project_number,"secrets",each.value.secrets_prefix,"__")})"
-#   google_cloud_run_service_iam_member
-#   google_folder_iam_member
 #   more as needed
 
 
-# TODO: ?? update to be 1 of project, org, or billing required
+# TODO: ?? update to support billing required. 1 of the 4 must be specified
 resource "null_resource" "org_proj_precondition_validation" {
   lifecycle {
     precondition {
-      condition     = (var.project_id != "" && var.organization_id == "") || (var.project_id == "" && var.organization_id != "")
-      error_message = "Only organization_id or project_id can be specified and one must be specified."
+      condition = (
+        (var.folder_id != "" ? 1 : 0) +
+        (var.project_id != "" ? 1 : 0) +
+        (var.organization_id != "" ? 1 : 0) == 1
+      )
+      error_message = "One and only one of the following must be specified: folder_id, project_id, organization_id"
     }
   }
 }
 locals {
-  target_id = var.project_id != "" ? var.project_id : var.organization_id
+  target_id = var.project_id != "" ? var.project_id : var.organization_id != "" ? var.organization_id : var.folder_id
   members = flatten(
     [
       for member in var.members :
@@ -155,6 +158,22 @@ resource "google_billing_account_iam_member" "self" {
   member             = each.value.member
 }
 
+resource "google_folder_iam_member" "self" {
+  for_each = { for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
+  if var.folder_id != "" && member.resource == "base" }
+  folder = startswith(var.folder_id, "folder/") ? var.folder_id : "folder/${var.folder_id}"
+  role   = each.value.role
+  member = each.value.member
+
+  dynamic "condition" {
+    for_each = lookup(each.value, "condition", null) != null ? [each.value.condition] : []
+    content {
+      description = condition.value.description
+      expression  = condition.value.expression
+      title       = condition.value.title
+    }
+  }
+}
 resource "google_organization_iam_member" "self" {
   for_each = { for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
   if var.organization_id != "" && member.resource == "base" }
