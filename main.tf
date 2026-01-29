@@ -91,6 +91,7 @@ locals {
         {
           member   = member.member,
           resource = role.resource,
+          # FIX: fails for binding custom org role to folder/project. Do org data lookup
           role = (
             split(":", role.role)[0] == "project" ?
             "projects/${var.project_id}/roles/${split(":", role.role)[1]}"
@@ -161,7 +162,8 @@ resource "google_billing_account_iam_member" "self" {
 resource "google_folder_iam_member" "self" {
   for_each = { for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
   if var.folder_id != "" && member.resource == "base" }
-  folder = startswith(var.folder_id, "folder/") ? var.folder_id : "folder/${var.folder_id}"
+  folder = startswith(var.folder_id, "folders/") ? var.folder_id : "folders/${var.folder_id}"
+  #folder = var.folder_id
   role   = each.value.role
   member = each.value.member
 
