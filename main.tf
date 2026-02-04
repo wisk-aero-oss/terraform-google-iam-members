@@ -69,20 +69,23 @@
 
 
 # TODO: ?? update to support billing required. 1 of the 4 must be specified
-resource "null_resource" "org_proj_precondition_validation" {
-  lifecycle {
-    precondition {
-      condition = (
-        (var.folder_id != "" ? 1 : 0) +
-        (var.project_id != "" ? 1 : 0) +
-        (var.organization_id != "" ? 1 : 0) == 1
-      )
-      error_message = "One and only one of the following must be specified: folder_id, project_id, organization_id"
-    }
-  }
-}
+#   allow only 1 or 1 + organization_id
+#resource "null_resource" "org_proj_precondition_validation" {
+#  lifecycle {
+#    precondition {
+#      condition = (
+#        (var.folder_id != "" ? 1 : 0) +
+#        (var.project_id != "" ? 1 : 0) +
+#        (var.organization_id != "" ? 1 : 0) == 1
+#      )
+#      error_message = "One and only one of the following must be specified: folder_id, project_id, organization_id"
+#    }
+#  }
+#}
 locals {
-  target_id = var.project_id != "" ? var.project_id : var.organization_id != "" ? var.organization_id : var.folder_id
+  # organization_id must be last to allow it being set along with
+  # other scope to support use of custom org roles
+  target_id = var.project_id != "" ? var.project_id : var.folder_id != "" ? var.folder_id : var.organization_id
   members = flatten(
     [
       for member in var.members :
@@ -91,7 +94,6 @@ locals {
         {
           member   = member.member,
           resource = role.resource,
-          # FIX: fails for binding custom org role to folder/project. Do org data lookup
           role = (
             split(":", role.role)[0] == "project" ?
             "projects/${var.project_id}/roles/${split(":", role.role)[1]}"
@@ -111,7 +113,7 @@ locals {
 
 resource "google_bigquery_dataset_iam_member" "self" {
   for_each = { for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
-  if var.project_id != "" && startswith(member.resource, "bigquery-dataset:") }
+  if local.target_id == var.project_id && startswith(member.resource, "bigquery-dataset:") }
 
   project = local.target_id
   role    = each.value.role
@@ -131,7 +133,7 @@ resource "google_bigquery_dataset_iam_member" "self" {
 
 resource "google_bigquery_table_iam_member" "self" {
   for_each = { for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
-  if var.project_id != "" && startswith(member.resource, "bigquery-table:") }
+  if local.target_id == var.project_id && startswith(member.resource, "bigquery-table:") }
 
   project = local.target_id
   role    = each.value.role
@@ -161,7 +163,7 @@ resource "google_billing_account_iam_member" "self" {
 
 resource "google_folder_iam_member" "self" {
   for_each = { for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
-  if var.folder_id != "" && member.resource == "base" }
+  if local.target_id == var.folder_id && member.resource == "base" }
   folder = startswith(var.folder_id, "folders/") ? var.folder_id : "folders/${var.folder_id}"
   #folder = var.folder_id
   role   = each.value.role
@@ -178,7 +180,7 @@ resource "google_folder_iam_member" "self" {
 }
 resource "google_organization_iam_member" "self" {
   for_each = { for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
-  if var.organization_id != "" && member.resource == "base" }
+  if local.target_id == var.organization_id && member.resource == "base" }
 
   org_id = local.target_id
   role   = each.value.role
@@ -196,7 +198,7 @@ resource "google_organization_iam_member" "self" {
 
 resource "google_project_iam_member" "self" {
   for_each = { for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
-  if var.project_id != "" && member.resource == "base" }
+  if local.target_id == var.project_id && member.resource == "base" }
 
   project = local.target_id
   role    = each.value.role
@@ -214,7 +216,7 @@ resource "google_project_iam_member" "self" {
 
 resource "google_storage_bucket_iam_member" "self" {
   for_each = { for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
-  if var.project_id != "" && startswith(member.resource, "storage:") }
+  if local.target_id == var.project_id && startswith(member.resource, "storage:") }
 
   role   = each.value.role
   member = each.value.member
@@ -234,7 +236,7 @@ resource "google_storage_bucket_iam_member" "self" {
 resource "google_cloud_run_v2_job_iam_member" "self" {
   for_each = {
     for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
-    if var.project_id != "" && startswith(member.resource, "cloud-run-job:")
+    if local.target_id == var.project_id && startswith(member.resource, "cloud-run-job:")
   }
 
   project  = local.target_id
@@ -257,7 +259,7 @@ resource "google_cloud_run_v2_job_iam_member" "self" {
 resource "google_secret_manager_secret_iam_member" "self" {
   for_each = {
     for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
-    if var.project_id != "" && startswith(member.resource, "secret:")
+    if local.target_id == var.project_id && startswith(member.resource, "secret:")
   }
 
   project = local.target_id
@@ -279,7 +281,7 @@ resource "google_secret_manager_secret_iam_member" "self" {
 resource "google_service_account_iam_member" "self" {
   for_each = {
     for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
-    if var.project_id != "" && startswith(member.resource, "service-account:")
+    if local.target_id == var.project_id && startswith(member.resource, "service-account:")
   }
 
   role   = each.value.role
@@ -300,7 +302,7 @@ resource "google_service_account_iam_member" "self" {
 resource "google_artifact_registry_repository_iam_member" "self" {
   for_each = {
     for member in local.members : "${member.member}-${member.role}-${member.resource}" => member
-    if var.project_id != "" && startswith(member.resource, "artifact-registry:")
+    if local.target_id == var.project_id && startswith(member.resource, "artifact-registry:")
   }
 
   project  = local.target_id
