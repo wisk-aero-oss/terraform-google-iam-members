@@ -67,21 +67,19 @@
 #       expression  = "resource.name.startsWith(${format("\"%s/%s/%s/%s%s\"","projects",var.project_number,"secrets",each.value.secrets_prefix,"__")})"
 #   more as needed
 
+# TODO: ?? update to support billing required.
+resource "null_resource" "scope_precondition_validation" {
+  lifecycle {
+    precondition {
+      condition = (
+        (var.folder_id != "" ? 1 : 0) +
+        (var.project_id != "" ? 1 : 0)
+      ) <= 1
+      error_message = "Only zero or one of the following may be specified: folder_id, project_id"
+    }
+  }
+}
 
-# TODO: ?? update to support billing required. 1 of the 4 must be specified
-#   allow only 1 or 1 + organization_id
-#resource "null_resource" "org_proj_precondition_validation" {
-#  lifecycle {
-#    precondition {
-#      condition = (
-#        (var.folder_id != "" ? 1 : 0) +
-#        (var.project_id != "" ? 1 : 0) +
-#        (var.organization_id != "" ? 1 : 0) == 1
-#      )
-#      error_message = "One and only one of the following must be specified: folder_id, project_id, organization_id"
-#    }
-#  }
-#}
 locals {
   # organization_id must be last to allow it being set along with
   # other scope to support use of custom org roles

@@ -80,12 +80,14 @@ module "example" {
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.5.7 |
 | <a name="requirement_google"></a> [google](#requirement\_google) | ~> 7.12 |
+| <a name="requirement_null"></a> [null](#requirement\_null) | >= 3.2 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
 | <a name="provider_google"></a> [google](#provider\_google) | 7.15.0 |
+| <a name="provider_null"></a> [null](#provider\_null) | 3.2.4 |
 
 ## Modules
 
@@ -106,6 +108,7 @@ No modules.
 | [google_secret_manager_secret_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/secret_manager_secret_iam_member) | resource |
 | [google_service_account_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/service_account_iam_member) | resource |
 | [google_storage_bucket_iam_member.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/storage_bucket_iam_member) | resource |
+| [null_resource.scope_precondition_validation](https://registry.terraform.io/providers/hashicorp/null/latest/docs/resources/resource) | resource |
 | [google_billing_account.self](https://registry.terraform.io/providers/hashicorp/google/latest/docs/data-sources/billing_account) | data source |
 
 ## Inputs
